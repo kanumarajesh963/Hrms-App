@@ -9,11 +9,13 @@ import {
   getMonthlyAttendance,
   getAllLeaveBalances,
   getUserLeaveRequests,
+  getCompanyById,
 } from "../lib/store";
 import { CalendarDays, TrendingUp, Timer } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const company = getCompanyById(user.companyId);
   const [today, setToday] = useState(getTodayRecord(user.id));
   const [now, setNow] = useState(Date.now());
   const [monthRecords, setMonthRecords] = useState([]);
@@ -58,7 +60,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHeader eyebrow={user.department} title="Today's overview" />
+      <PageHeader eyebrow={`${company?.name || ""} · ${user.department}`} title="Today's overview" />
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1.1fr) minmax(0,1fr)", gap: 20 }} className="dash-grid">
         <Card style={{ padding: 28, display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>

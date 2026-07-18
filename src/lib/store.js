@@ -2,13 +2,14 @@
 // shown in the UI is hardcoded — it's always derived from stored records.
 
 const KEYS = {
+  companies: "hrms_companies",
   users: "hrms_users",
   attendance: "hrms_attendance",
   leaveTypes: "hrms_leave_types",
   leaveRequests: "hrms_leave_requests",
   notifications: "hrms_notifications",
   session: "hrms_session",
-  seeded: "hrms_seeded_v1",
+  seeded: "hrms_seeded_v2",
 };
 
 function read(key, fallback) {
@@ -32,43 +33,88 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// ---------- Seed (bootstrap only — first run needs at least one login) ----------
+// ---------- Seed (bootstrap only — first run needs logins to exist) ----------
+const COMPANIES = [
+  { id: "cashe", name: "Cashe" },
+  { id: "bhanix", name: "Bhanix" },
+  { id: "aeries", name: "Aeries" },
+  { id: "karatclub", name: "Karat Club" },
+];
+
+const DEPARTMENTS = ["Engineering", "Sales", "Marketing", "Finance", "Operations", "Customer Support"];
+const DESIGNATIONS = ["Associate", "Senior Associate", "Team Lead", "Analyst", "Executive"];
+const FIRST_NAMES = [
+  "Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Krishna", "Ishaan", "Kabir",
+  "Ananya", "Diya", "Priya", "Ira", "Myra", "Anika", "Kavya", "Riya", "Sara", "Tara",
+  "Rohan", "Karan", "Nikhil", "Varun", "Aman", "Dev", "Yash", "Rahul", "Arnav", "Siddharth",
+  "Meera", "Neha", "Pooja", "Divya", "Shreya", "Kritika", "Aisha", "Naina", "Simran", "Tanvi",
+];
+const LAST_NAMES = [
+  "Sharma", "Verma", "Gupta", "Mehta", "Rao", "Iyer", "Nair", "Reddy", "Kapoor", "Malhotra",
+  "Chopra", "Bhatt", "Desai", "Joshi", "Kulkarni", "Menon", "Pillai", "Shetty", "Singh", "Agarwal",
+];
+const PALETTE = ["#0F6E5C", "#C77D24", "#2A4C8F", "#8A3A64", "#3B7D7D", "#8B5E24"];
+
+function pick(arr, i) {
+  return arr[i % arr.length];
+}
+
+function buildCompanyUsers(companyId) {
+  const users = [];
+
+  // 2 HR admins per company
+  const hrNames = [
+    [pick(FIRST_NAMES, 10), pick(LAST_NAMES, 3)],
+    [pick(FIRST_NAMES, 20), pick(LAST_NAMES, 7)],
+  ];
+  hrNames.forEach(([first, last], i) => {
+    users.push({
+      id: uid(),
+      companyId,
+      name: `${first} ${last}`,
+      username: `hr${i + 1}.${companyId}`,
+      password: `${companyId}123`,
+      role: "admin",
+      email: `${first.toLowerCase()}.${last.toLowerCase()}@${companyId}.com`,
+      phone: `+91 9${companyId.length}${i}00 0000${i}`,
+      department: "Human Resources",
+      designation: i === 0 ? "HR Manager" : "HR Executive",
+      baseSalary: 85000 + i * 10000,
+      joinDate: "2021-06-01",
+      color: PALETTE[i % PALETTE.length],
+    });
+  });
+
+  // 20 employees per company
+  for (let i = 0; i < 20; i++) {
+    const first = pick(FIRST_NAMES, i + companyId.length);
+    const last = pick(LAST_NAMES, i * 3 + companyId.length);
+    const department = pick(DEPARTMENTS, i);
+    const designation = pick(DESIGNATIONS, i);
+    users.push({
+      id: uid(),
+      companyId,
+      name: `${first} ${last}`,
+      username: `emp${i + 1}.${companyId}`,
+      password: `${companyId}123`,
+      role: "employee",
+      email: `${first.toLowerCase()}.${last.toLowerCase()}${i}@${companyId}.com`,
+      phone: `+91 98${i.toString().padStart(3, "0")}0 000${i}`,
+      department,
+      designation,
+      baseSalary: 32000 + (i % 6) * 8000,
+      joinDate: `202${2 + (i % 3)}-0${1 + (i % 9 > 8 ? 9 : (i % 9) + 1)}-1${i % 9}`,
+      color: pick(PALETTE, i),
+    });
+  }
+
+  return users;
+}
+
 export function seedIfEmpty() {
   if (read(KEYS.seeded, false)) return;
 
-  const adminId = uid();
-  const empId = uid();
-
-  const users = [
-    {
-      id: adminId,
-      name: "Anita Rao",
-      username: "admin",
-      password: "admin123",
-      role: "admin",
-      email: "anita.rao@company.com",
-      phone: "+91 90000 00001",
-      department: "Human Resources",
-      designation: "HR Manager",
-      baseSalary: 95000,
-      joinDate: "2022-03-01",
-      color: "#0F6E5C",
-    },
-    {
-      id: empId,
-      name: "Rahul Mehta",
-      username: "rahul",
-      password: "rahul123",
-      role: "employee",
-      email: "rahul.mehta@company.com",
-      phone: "+91 90000 00002",
-      department: "Engineering",
-      designation: "Software Engineer",
-      baseSalary: 72000,
-      joinDate: "2023-07-15",
-      color: "#C77D24",
-    },
-  ];
+  const users = COMPANIES.flatMap((c) => buildCompanyUsers(c.id));
 
   const leaveTypes = [
     { id: uid(), name: "Casual Leave", code: "CL", annualQuota: 12 },
@@ -76,12 +122,22 @@ export function seedIfEmpty() {
     { id: uid(), name: "Earned Leave", code: "EL", annualQuota: 15 },
   ];
 
+  write(KEYS.companies, COMPANIES);
   write(KEYS.users, users);
   write(KEYS.attendance, []);
   write(KEYS.leaveTypes, leaveTypes);
   write(KEYS.leaveRequests, []);
   write(KEYS.notifications, []);
   write(KEYS.seeded, true);
+}
+
+// ---------- Companies ----------
+export function getCompanies() {
+  return read(KEYS.companies, COMPANIES);
+}
+
+export function getCompanyById(id) {
+  return getCompanies().find((c) => c.id === id) || null;
 }
 
 // ---------- Session ----------
@@ -107,8 +163,9 @@ export function getCurrentUser() {
 }
 
 // ---------- Users ----------
-export function getUsers() {
-  return read(KEYS.users, []);
+export function getUsers(companyId) {
+  const users = read(KEYS.users, []);
+  return companyId ? users.filter((u) => u.companyId === companyId) : users;
 }
 
 export function getUserById(id) {
@@ -124,6 +181,9 @@ export function updateUser(id, patch) {
 
 export function addEmployee(data) {
   const users = getUsers();
+  if (!data.companyId) {
+    return { ok: false, error: "Missing company" };
+  }
   if (users.some((u) => u.username.toLowerCase() === data.username.toLowerCase())) {
     return { ok: false, error: "Username already exists" };
   }
@@ -221,6 +281,11 @@ export function getUserLeaveRequests(userId) {
 
 export function getPendingLeaveRequests() {
   return getLeaveRequests().filter((l) => l.status === "pending");
+}
+
+export function getCompanyLeaveRequests(companyId) {
+  const companyUserIds = new Set(getUsers(companyId).map((u) => u.id));
+  return getLeaveRequests().filter((r) => companyUserIds.has(r.userId));
 }
 
 function daysBetween(start, end) {

@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { PageHeader, Card, Button, Badge, EmptyState } from "../components/ui";
-import { getLeaveRequests, getLeaveTypes, getUserById, actionLeaveRequest } from "../lib/store";
+import { getCompanyLeaveRequests, getLeaveTypes, getUserById, actionLeaveRequest, getCompanyById } from "../lib/store";
 
 export default function Approvals() {
   const { user } = useAuth();
+  const company = getCompanyById(user.companyId);
   const [requests, setRequests] = useState([]);
   const [types, setTypes] = useState([]);
   const [filter, setFilter] = useState("pending");
 
   function refresh() {
-    setRequests(getLeaveRequests());
+    setRequests(getCompanyLeaveRequests(user.companyId));
     setTypes(getLeaveTypes());
   }
 
@@ -28,7 +29,7 @@ export default function Approvals() {
   return (
     <div>
       <PageHeader
-        eyebrow="Team"
+        eyebrow={company?.name || "Team"}
         title="Leave approvals"
         action={
           <div style={{ display: "flex", gap: 6 }}>

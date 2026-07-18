@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { PageHeader, Card, Button, Field, inputStyle, Badge } from "../components/ui";
-import { getUsers, addEmployee } from "../lib/store";
+import { getUsers, addEmployee, getCompanyById } from "../lib/store";
 
 const DEPARTMENTS = ["Engineering", "Human Resources", "Sales", "Marketing", "Finance", "Operations"];
 
 export default function Employees() {
+  const { user } = useAuth();
+  const company = getCompanyById(user.companyId);
   const [employees, setEmployees] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -20,7 +23,7 @@ export default function Employees() {
   const [error, setError] = useState("");
 
   function refresh() {
-    setEmployees(getUsers());
+    setEmployees(getUsers(user.companyId));
   }
 
   useEffect(() => {
@@ -34,7 +37,7 @@ export default function Employees() {
       setError("Name, username and password are required.");
       return;
     }
-    const res = addEmployee({ ...form, baseSalary: Number(form.baseSalary) });
+    const res = addEmployee({ ...form, companyId: user.companyId, baseSalary: Number(form.baseSalary) });
     if (!res.ok) {
       setError(res.error);
       return;
@@ -47,7 +50,7 @@ export default function Employees() {
   return (
     <div>
       <PageHeader
-        eyebrow="Team"
+        eyebrow={company?.name || "Team"}
         title="Employees"
         action={
           <Button variant="amber" onClick={() => setShowForm((v) => !v)}>

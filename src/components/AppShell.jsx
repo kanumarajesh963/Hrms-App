@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { getNotifications, markAllRead } from "../lib/store";
+import { getNotifications, markAllRead, getCompanyById } from "../lib/store";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },
@@ -42,6 +42,7 @@ export default function AppShell({ children }) {
 
   const nav = user?.role === "admin" ? [...NAV, ...ADMIN_NAV] : NAV;
   const unread = notifications.filter((n) => !n.read).length;
+  const company = user ? getCompanyById(user.companyId) : null;
 
   function handleLogout() {
     logout();
@@ -72,11 +73,18 @@ export default function AppShell({ children }) {
           height: "100vh",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 6px" }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
-            H
+        <div style={{ padding: "0 6px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: "var(--amber)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>
+              H
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.3 }}>Havn HR</span>
           </div>
-          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.3 }}>Havn HR</span>
+          {company && (
+            <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+              {company.name}
+            </div>
+          )}
         </div>
 
         <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>

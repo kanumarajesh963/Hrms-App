@@ -56,8 +56,12 @@ export default function Login() {
               Punch in, track hours, apply for leave, and view payslips — all computed live from your real activity.
             </p>
           </div>
-          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.55)" }}>
-            Demo logins — Admin: <b>admin / admin123</b> · Employee: <b>rahul / rahul123</b>
+          <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>
+            4 demo companies are seeded — <b>cashe</b>, <b>bhanix</b>, <b>aeries</b>, <b>karatclub</b>.
+            <br />
+            HR login: <b>hr1.&lt;company&gt;</b> or <b>hr2.&lt;company&gt;</b> · Employee login: <b>emp1.&lt;company&gt;</b> through <b>emp20.&lt;company&gt;</b>
+            <br />
+            Password for everyone in a company: <b>&lt;company&gt;123</b> (e.g. <b>hr1.cashe / cashe123</b>)
           </div>
         </div>
 

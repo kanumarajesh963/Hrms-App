@@ -21,14 +21,24 @@ computer's local network IP instead of `localhost`.
 
 ## Demo logins (seeded on first run)
 
-| Role     | Username | Password  |
-|----------|----------|-----------|
-| Admin/HR | `admin`  | `admin123`|
-| Employee | `rahul`  | `rahul123`|
+4 companies are seeded, each with 2 HR admins and 20 employees:
 
-As admin you can add real employees from the **Employees** page — remove the
-seed accounts by clearing your browser's localStorage for this site once you
-have real data in.
+- `cashe`
+- `bhanix`
+- `aeries`
+- `karatclub`
+
+| Role     | Username pattern                  | Password pattern   |
+|----------|------------------------------------|---------------------|
+| HR/Admin | `hr1.<company>` or `hr2.<company>` | `<company>123`      |
+| Employee | `emp1.<company>` … `emp20.<company>` | `<company>123`   |
+
+Example: `hr1.cashe` / `cashe123`, or `emp7.bhanix` / `bhanix123`.
+
+Each HR admin only ever sees their own company's employees, attendance, and
+leave requests — data is scoped per company (`companyId`) throughout the
+app. As HR you can add more real employees from the **Employees** page; they
+join the same company automatically.
 
 ## What's inside
 
