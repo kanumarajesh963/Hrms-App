@@ -87,7 +87,7 @@ export const inputStyle = {
   padding: "10px 12px",
   borderRadius: "var(--radius-sm)",
   border: "1px solid var(--border)",
-  fontSize: 14,
+  fontSize: 16,
   fontWeight: 500,
   background: "var(--bg)",
   color: "var(--ink)",

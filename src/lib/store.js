@@ -8,8 +8,9 @@ const KEYS = {
   leaveTypes: "hrms_leave_types",
   leaveRequests: "hrms_leave_requests",
   notifications: "hrms_notifications",
+  accessLogs: "hrms_access_logs",
   session: "hrms_session",
-  seeded: "hrms_seeded_v2",
+  seeded: "hrms_seeded_v3",
 };
 
 function read(key, fallback) {
@@ -86,6 +87,7 @@ function buildCompanyUsers(companyId) {
       baseSalary: 85000 + i * 10000,
       joinDate: "2021-06-01",
       color: PALETTE[i % PALETTE.length],
+      doorAccess: { mainDoor: true, inside: true, outside: true },
     });
   });
 
@@ -110,6 +112,11 @@ function buildCompanyUsers(companyId) {
       baseSalary: 32000 + (i % 6) * 8000,
       joinDate: `202${2 + (i % 3)}-0${1 + (i % 9 > 8 ? 9 : (i % 9) + 1)}-1${i % 9}`,
       color: pick(PALETTE, i),
+      doorAccess: {
+        mainDoor: true,
+        inside: department === "Engineering" || department === "Operations",
+        outside: department === "Sales" || department === "Marketing" || department === "Operations",
+      },
     });
   }
 
@@ -180,7 +187,6 @@ export function getUserById(id) {
 export function updateUser(id, patch) {
   const users = getUsers().map((u) => (u.id === id ? { ...u, ...patch } : u));
   write(KEYS.users, users);
-  const session = read(KEYS.session, null);
   return users.find((u) => u.id === id);
 }
 
@@ -210,6 +216,7 @@ export function addEmployee(data) {
     role: "employee",
     color: palette[users.length % palette.length],
     joinDate: todayISO(),
+    doorAccess: { mainDoor: true, inside: false, outside: false },
     ...data,
   };
   users.push(newUser);
@@ -455,3 +462,81 @@ export function computePayslip(userId, year, month) {
 }
 
 export { todayISO };
+
+// ---------- Door access & biometric check-ins ----------
+// Note: this logs software-verified identity check-ins using the device's
+// own fingerprint/biometric sensor (via WebAuthn). It does not control a
+// physical door lock — that requires real IoT door-controller hardware,
+// which is outside what any web app can do.
+
+export function updateDoorAccess(userId, doorAccess) {
+  const users = getUsers().map((u) => (u.id === userId ? { ...u, doorAccess } : u));
+  write(KEYS.users, users);
+  return users.find((u) => u.id === userId);
+}
+
+export function hasWebAuthnSupport() {
+  return typeof window !== "undefined" && !!window.PublicKeyCredential;
+}
+
+export function getUserAccessLogs(userId) {
+  return read(KEYS.accessLogs, [])
+    .filter((l) => l.userId === userId)
+    .sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
+export function getCompanyAccessLogs(companyId) {
+  const companyUserIds = new Set(getUsers(companyId).map((u) => u.id));
+  return read(KEYS.accessLogs, [])
+    .filter((l) => companyUserIds.has(l.userId))
+    .sort((a, b) => (a.at < b.at ? 1 : -1));
+}
+
+export function logAccessEvent(userId, door, method = "fingerprint") {
+  const logs = read(KEYS.accessLogs, []);
+  logs.push({ id: uid(), userId, door, method, at: new Date().toISOString() });
+  write(KEYS.accessLogs, logs);
+}
+
+// Enroll this device's platform authenticator (Touch ID / Windows Hello /
+// Android fingerprint) against the user's account. Returns a base64 credential
+// id stored on the user record, so future check-ins can verify against it.
+export async function enrollBiometric(userId) {
+  const user = getUserById(userId);
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const cred = await navigator.credentials.create({
+    publicKey: {
+      challenge,
+      rp: { name: "Havn HR" },
+      user: {
+        id: new TextEncoder().encode(userId),
+        name: user.username,
+        displayName: user.name,
+      },
+      pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+      authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+      timeout: 60000,
+    },
+  });
+  const credentialId = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+  updateUser(userId, { biometricCredentialId: credentialId });
+  return credentialId;
+}
+
+export async function verifyBiometric(userId) {
+  const user = getUserById(userId);
+  if (!user?.biometricCredentialId) {
+    return { ok: false, error: "No fingerprint enrolled on this device yet" };
+  }
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const rawId = Uint8Array.from(atob(user.biometricCredentialId), (c) => c.charCodeAt(0));
+  await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      allowCredentials: [{ id: rawId, type: "public-key" }],
+      userVerification: "required",
+      timeout: 60000,
+    },
+  });
+  return { ok: true };
+}

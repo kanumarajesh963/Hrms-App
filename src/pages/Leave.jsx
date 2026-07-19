@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { PageHeader, Card, Button, Field, inputStyle, Badge, EmptyState } from "../components/ui";
+import { PageHeader, Card, Button, Badge, EmptyState } from "../components/ui";
 import { getLeaveTypes, applyLeave, getUserLeaveRequests, getAllLeaveBalances } from "../lib/store";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { TextField, MenuItem, Alert, Fade, Grow } from "@mui/material";
+
+const schema = Yup.object({
+  leaveTypeId: Yup.string().required("Required"),
+  startDate: Yup.date().required("Required"),
+  endDate: Yup.date().min(Yup.ref("startDate"), "End date can't be before start date").required("Required"),
+  reason: Yup.string().trim().min(3, "Give a brief reason").required("Required"),
+});
 
 export default function Leave() {
   const { user } = useAuth();
   const [types, setTypes] = useState([]);
   const [requests, setRequests] = useState([]);
   const [balances, setBalances] = useState([]);
-  const [form, setForm] = useState({ leaveTypeId: "", startDate: "", endDate: "", reason: "" });
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   function refresh() {
     setTypes(getLeaveTypes());
@@ -22,29 +29,29 @@ export default function Leave() {
     refresh();
   }, [user.id]);
 
-  useEffect(() => {
-    if (types.length && !form.leaveTypeId) {
-      setForm((f) => ({ ...f, leaveTypeId: types[0].id }));
-    }
-  }, [types]);
+  const formik = useFormik({
+    initialValues: { leaveTypeId: "", startDate: "", endDate: "", reason: "" },
+    validationSchema: schema,
+    enableReinitialize: false,
+    onSubmit: (values, { setStatus, setSubmitting, resetForm }) => {
+      const res = applyLeave(user.id, values);
+      if (!res.ok) {
+        setStatus({ type: "error", text: res.error });
+        setSubmitting(false);
+        return;
+      }
+      setStatus({ type: "success", text: "Leave request submitted." });
+      resetForm({ values: { ...values, startDate: "", endDate: "", reason: "" } });
+      refresh();
+    },
+  });
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    if (!form.startDate || !form.endDate || !form.reason.trim()) {
-      setError("Please fill every field.");
-      return;
+  useEffect(() => {
+    if (types.length && !formik.values.leaveTypeId) {
+      formik.setFieldValue("leaveTypeId", types[0].id);
     }
-    const res = applyLeave(user.id, form);
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
-    setSuccess("Leave request submitted.");
-    setForm((f) => ({ ...f, startDate: "", endDate: "", reason: "" }));
-    refresh();
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [types]);
 
   return (
     <div>
@@ -53,38 +60,67 @@ export default function Leave() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: 20 }} className="leave-grid">
         <Card style={{ padding: 24 }}>
           <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 16 }}>Apply for leave</div>
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <Field label="Leave type">
-              <select
-                style={inputStyle}
-                value={form.leaveTypeId}
-                onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })}
-              >
-                {types.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+          <form onSubmit={formik.handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <TextField
+              select
+              fullWidth
+              label="Leave type"
+              name="leaveTypeId"
+              value={formik.values.leaveTypeId}
+              onChange={formik.handleChange}
+            >
+              {types.map((t) => (
+                <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+              ))}
+            </TextField>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Field label="Start date">
-                <input type="date" style={inputStyle} value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-              </Field>
-              <Field label="End date">
-                <input type="date" style={inputStyle} value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
-              </Field>
-            </div>
-            <Field label="Reason">
-              <textarea
-                style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                value={form.reason}
-                onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                placeholder="Briefly describe the reason"
+              <TextField
+                fullWidth
+                type="date"
+                label="Start date"
+                name="startDate"
+                InputLabelProps={{ shrink: true }}
+                value={formik.values.startDate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.startDate && !!formik.errors.startDate}
+                helperText={formik.touched.startDate && formik.errors.startDate}
               />
-            </Field>
-            {error && <div style={{ color: "var(--danger)", fontSize: 13, fontWeight: 600 }}>{error}</div>}
-            {success && <div style={{ color: "var(--teal)", fontSize: 13, fontWeight: 600 }}>{success}</div>}
+              <TextField
+                fullWidth
+                type="date"
+                label="End date"
+                name="endDate"
+                InputLabelProps={{ shrink: true }}
+                value={formik.values.endDate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.endDate && !!formik.errors.endDate}
+                helperText={formik.touched.endDate && formik.errors.endDate}
+              />
+            </div>
+
+            <TextField
+              fullWidth
+              multiline
+              minRows={3}
+              label="Reason"
+              name="reason"
+              placeholder="Briefly describe the reason"
+              value={formik.values.reason}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.reason && !!formik.errors.reason}
+              helperText={formik.touched.reason && formik.errors.reason}
+            />
+
+            {formik.status && (
+              <Fade in>
+                <Alert severity={formik.status.type} sx={{ borderRadius: 2 }}>{formik.status.text}</Alert>
+              </Fade>
+            )}
+
             <Button variant="amber" type="submit">
               Submit request
             </Button>
@@ -113,20 +149,22 @@ export default function Leave() {
             <EmptyState title="No leave requests yet" hint="Requests you submit will show up here." />
           ) : (
             <div>
-              {requests.map((r) => {
+              {requests.map((r, i) => {
                 const type = types.find((t) => t.id === r.leaveTypeId);
                 const tone = r.status === "approved" ? "teal" : r.status === "rejected" ? "danger" : "amber";
                 return (
-                  <div key={r.id} style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{type?.name}</div>
-                      <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
-                        {r.startDate} → {r.endDate} · {r.days} day{r.days > 1 ? "s" : ""}
+                  <Grow in key={r.id} style={{ transformOrigin: "top" }} timeout={300 + i * 60}>
+                    <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{type?.name}</div>
+                        <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>
+                          {r.startDate} → {r.endDate} · {r.days} day{r.days > 1 ? "s" : ""}
+                        </div>
+                        <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 4 }}>{r.reason}</div>
                       </div>
-                      <div style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: 4 }}>{r.reason}</div>
+                      <Badge tone={tone}>{r.status}</Badge>
                     </div>
-                    <Badge tone={tone}>{r.status}</Badge>
-                  </div>
+                  </Grow>
                 );
               })}
             </div>

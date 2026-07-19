@@ -12,6 +12,8 @@ import {
   Users,
   Menu,
   X,
+  Fingerprint,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getNotifications, markAllRead, getCompanyById } from "../lib/store";
@@ -21,12 +23,14 @@ const NAV = [
   { to: "/attendance", label: "Attendance", icon: Clock },
   { to: "/leave", label: "Leave", icon: CalendarDays },
   { to: "/payslips", label: "Payslips", icon: Wallet },
+  { to: "/biometrics", label: "Biometrics", icon: Fingerprint },
   { to: "/profile", label: "Profile", icon: User },
 ];
 
 const ADMIN_NAV = [
   { to: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { to: "/employees", label: "Employees", icon: Users },
+  { to: "/access-control", label: "Access Control", icon: ShieldCheck },
 ];
 
 export default function AppShell({ children }) {
@@ -268,7 +272,7 @@ export default function AppShell({ children }) {
           right: 0,
           background: "var(--surface)",
           borderTop: "1px solid var(--border)",
-          padding: "8px 6px",
+          padding: "8px 6px calc(8px + env(safe-area-inset-bottom))",
           justifyContent: "space-around",
           zIndex: 20,
         }}
@@ -297,11 +301,20 @@ export default function AppShell({ children }) {
       </nav>
 
       <style>{`
+        @keyframes pageFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        main { animation: pageFadeIn 0.35s ease; }
+
         @media (max-width: 860px) {
           .app-sidebar { display: none; }
           .app-mobile-topbar { display: flex !important; }
           .app-bottom-nav { display: flex !important; }
           main { padding-bottom: 100px !important; }
+        }
+        @media (max-width: 420px) {
+          .app-bottom-nav a { font-size: 9.5px !important; padding: 4px 4px !important; }
         }
       `}</style>
     </div>

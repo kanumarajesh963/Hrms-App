@@ -9,6 +9,8 @@ import Payslips from "./pages/Payslips";
 import Profile from "./pages/Profile";
 import Approvals from "./pages/Approvals";
 import Employees from "./pages/Employees";
+import Biometrics from "./pages/Biometrics";
+import AccessControl from "./pages/AccessControl";
 
 function Protected({ children, adminOnly = false }) {
   const { user, ready } = useAuth();
@@ -35,9 +37,11 @@ export default function App() {
           <Route path="/attendance" element={<Protected><Attendance /></Protected>} />
           <Route path="/leave" element={<Protected><Leave /></Protected>} />
           <Route path="/payslips" element={<Protected><Payslips /></Protected>} />
+          <Route path="/biometrics" element={<Protected><Biometrics /></Protected>} />
           <Route path="/profile" element={<Protected><Profile /></Protected>} />
           <Route path="/approvals" element={<Protected adminOnly><Approvals /></Protected>} />
           <Route path="/employees" element={<Protected adminOnly><Employees /></Protected>} />
+          <Route path="/access-control" element={<Protected adminOnly><AccessControl /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
