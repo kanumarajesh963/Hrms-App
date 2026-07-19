@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { PageHeader, Card, Button, Badge, EmptyState } from "../components/ui";
 import { getCompanyLeaveRequests, getLeaveTypes, getUserById, actionLeaveRequest, getCompanyById } from "../lib/store";
+import ProfileDrawer from "../components/ProfileDrawer";
 
 export default function Approvals() {
   const { user } = useAuth();
@@ -9,6 +10,7 @@ export default function Approvals() {
   const [requests, setRequests] = useState([]);
   const [types, setTypes] = useState([]);
   const [filter, setFilter] = useState("pending");
+  const [selected, setSelected] = useState(null);
 
   function refresh() {
     setRequests(getCompanyLeaveRequests(user.companyId));
@@ -65,7 +67,7 @@ export default function Approvals() {
             const tone = r.status === "approved" ? "teal" : r.status === "rejected" ? "danger" : "amber";
             return (
               <div key={r.id} style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => setSelected(emp)}>
                   <div style={{ width: 38, height: 38, borderRadius: "50%", background: emp?.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0 }}>
                     {emp?.name.split(" ").map((n) => n[0]).join("")}
                   </div>
@@ -90,6 +92,8 @@ export default function Approvals() {
           })
         )}
       </Card>
+
+      {selected && <ProfileDrawer person={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }

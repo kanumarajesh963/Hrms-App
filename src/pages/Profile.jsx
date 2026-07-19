@@ -40,7 +40,8 @@ export default function Profile() {
             {user.name.split(" ").map((n) => n[0]).join("")}
           </div>
           <div style={{ fontWeight: 800, fontSize: 17 }}>{user.name}</div>
-          <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>{user.designation}</div>
+          <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 4 }}>{user.designation}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--teal)", marginBottom: 8 }}>{user.employeeId}</div>
           <Badge tone={user.role === "admin" ? "amber" : "teal"}>{user.role}</Badge>
 
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)", textAlign: "left", display: "flex", flexDirection: "column", gap: 8 }}>

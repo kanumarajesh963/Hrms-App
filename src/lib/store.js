@@ -35,10 +35,10 @@ function todayISO() {
 
 // ---------- Seed (bootstrap only — first run needs logins to exist) ----------
 const COMPANIES = [
-  { id: "cashe", name: "Cashe" },
-  { id: "bhanix", name: "Bhanix" },
-  { id: "aeries", name: "Aeries" },
-  { id: "karatclub", name: "Karat Club" },
+  { id: "cashe", name: "Cashe", code: "CS" },
+  { id: "bhanix", name: "Bhanix", code: "BX" },
+  { id: "aeries", name: "Aeries", code: "AR" },
+  { id: "karatclub", name: "Karat Club", code: "KC" },
 ];
 
 const DEPARTMENTS = ["Engineering", "Sales", "Marketing", "Finance", "Operations", "Customer Support"];
@@ -61,6 +61,9 @@ function pick(arr, i) {
 
 function buildCompanyUsers(companyId) {
   const users = [];
+  const code = COMPANIES.find((c) => c.id === companyId)?.code || companyId.slice(0, 2).toUpperCase();
+  let seq = 1;
+  const nextEmployeeId = () => `${code}${String(seq++).padStart(4, "0")}`;
 
   // 2 HR admins per company
   const hrNames = [
@@ -70,6 +73,7 @@ function buildCompanyUsers(companyId) {
   hrNames.forEach(([first, last], i) => {
     users.push({
       id: uid(),
+      employeeId: nextEmployeeId(),
       companyId,
       name: `${first} ${last}`,
       username: `hr${i + 1}.${companyId}`,
@@ -93,6 +97,7 @@ function buildCompanyUsers(companyId) {
     const designation = pick(DESIGNATIONS, i);
     users.push({
       id: uid(),
+      employeeId: nextEmployeeId(),
       companyId,
       name: `${first} ${last}`,
       username: `emp${i + 1}.${companyId}`,
@@ -179,6 +184,17 @@ export function updateUser(id, patch) {
   return users.find((u) => u.id === id);
 }
 
+export function getNextEmployeeId(companyId) {
+  const code = getCompanyById(companyId)?.code || companyId.slice(0, 2).toUpperCase();
+  const existing = getUsers(companyId)
+    .map((u) => u.employeeId)
+    .filter((id) => id && id.startsWith(code))
+    .map((id) => parseInt(id.slice(code.length), 10))
+    .filter((n) => !isNaN(n));
+  const next = (existing.length ? Math.max(...existing) : 0) + 1;
+  return `${code}${String(next).padStart(4, "0")}`;
+}
+
 export function addEmployee(data) {
   const users = getUsers();
   if (!data.companyId) {
@@ -190,6 +206,7 @@ export function addEmployee(data) {
   const palette = ["#0F6E5C", "#C77D24", "#2A4C8F", "#8A3A64", "#3B7D7D", "#8B5E24"];
   const newUser = {
     id: uid(),
+    employeeId: getNextEmployeeId(data.companyId),
     role: "employee",
     color: palette[users.length % palette.length],
     joinDate: todayISO(),

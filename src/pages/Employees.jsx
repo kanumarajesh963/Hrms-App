@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { PageHeader, Card, Button, Field, inputStyle, Badge } from "../components/ui";
 import { getUsers, addEmployee, getCompanyById } from "../lib/store";
+import ProfileDrawer from "../components/ProfileDrawer";
 
 const DEPARTMENTS = ["Engineering", "Human Resources", "Sales", "Marketing", "Finance", "Operations"];
 
@@ -9,6 +10,7 @@ export default function Employees() {
   const { user } = useAuth();
   const company = getCompanyById(user.companyId);
   const [employees, setEmployees] = useState([]);
+  const [selected, setSelected] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -98,10 +100,10 @@ export default function Employees() {
 
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
             <thead>
               <tr style={{ background: "var(--surface-sunk)" }}>
-                {["Name", "Department", "Designation", "Base salary", "Role"].map((h) => (
+                {["Employee ID", "Name", "Department", "Designation", "Base salary", "Role"].map((h) => (
                   <th key={h} style={{ textAlign: "left", padding: "12px 18px", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5, color: "var(--muted)", fontWeight: 700 }}>
                     {h}
                   </th>
@@ -110,7 +112,14 @@ export default function Employees() {
             </thead>
             <tbody>
               {employees.map((e) => (
-                <tr key={e.id} style={{ borderTop: "1px solid var(--border)" }}>
+                <tr
+                  key={e.id}
+                  onClick={() => setSelected(e)}
+                  style={{ borderTop: "1px solid var(--border)", cursor: "pointer" }}
+                  onMouseEnter={(ev) => (ev.currentTarget.style.background = "var(--surface-sunk)")}
+                  onMouseLeave={(ev) => (ev.currentTarget.style.background = "transparent")}
+                >
+                  <td style={{ padding: "14px 18px", fontSize: 13, fontWeight: 800, color: "var(--teal)" }}>{e.employeeId}</td>
                   <td style={{ padding: "14px 18px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ width: 30, height: 30, borderRadius: "50%", background: e.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12 }}>
@@ -131,6 +140,8 @@ export default function Employees() {
           </table>
         </div>
       </Card>
+
+      {selected && <ProfileDrawer person={selected} onClose={() => setSelected(null)} />}
 
       <style>{`
         @media (max-width: 640px) {
