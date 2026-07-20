@@ -256,7 +256,7 @@ export default function AppShell({ children }) {
           </div>
         </header>
 
-        <main style={{ flex: 1, padding: "24px 28px 90px", maxWidth: 1100, width: "100%", margin: "0 auto" }}>
+        <main style={{ flex: 1, padding: "24px 28px 90px",  width: "100%", margin: "0 auto" }}>
           {children}
         </main>
       </div>
