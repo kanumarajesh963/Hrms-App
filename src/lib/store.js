@@ -9,8 +9,10 @@ const KEYS = {
   leaveRequests: "hrms_leave_requests",
   notifications: "hrms_notifications",
   accessLogs: "hrms_access_logs",
+  holidays: "hrms_holidays",
+  regularizations: "hrms_regularizations",
   session: "hrms_session",
-  seeded: "hrms_seeded_v3",
+  seeded: "hrms_seeded_v4",
 };
 
 function read(key, fallback) {
@@ -55,6 +57,24 @@ const LAST_NAMES = [
   "Chopra", "Bhatt", "Desai", "Joshi", "Kulkarni", "Menon", "Pillai", "Shetty", "Singh", "Agarwal",
 ];
 const PALETTE = ["#0F6E5C", "#C77D24", "#2A4C8F", "#8A3A64", "#3B7D7D", "#8B5E24"];
+
+const HOLIDAYS = [
+  { id: "hol-01", date: "2026-01-01", name: "New Year's Day", type: "public" },
+  { id: "hol-02", date: "2026-01-14", name: "Makar Sankranti", type: "public" },
+  { id: "hol-03", date: "2026-01-26", name: "Republic Day", type: "public" },
+  { id: "hol-04", date: "2026-03-06", name: "Holi", type: "public" },
+  { id: "hol-05", date: "2026-03-20", name: "Ugadi", type: "restricted" },
+  { id: "hol-06", date: "2026-04-03", name: "Good Friday", type: "restricted" },
+  { id: "hol-07", date: "2026-04-14", name: "Ambedkar Jayanti", type: "restricted" },
+  { id: "hol-08", date: "2026-05-01", name: "May Day", type: "public" },
+  { id: "hol-09", date: "2026-08-15", name: "Independence Day", type: "public" },
+  { id: "hol-10", date: "2026-08-26", name: "Ganesh Chaturthi", type: "public" },
+  { id: "hol-11", date: "2026-10-02", name: "Gandhi Jayanti", type: "public" },
+  { id: "hol-12", date: "2026-10-20", name: "Dussehra", type: "public" },
+  { id: "hol-13", date: "2026-11-08", name: "Diwali", type: "public" },
+  { id: "hol-14", date: "2026-11-09", name: "Govardhan Puja", type: "restricted" },
+  { id: "hol-15", date: "2026-12-25", name: "Christmas", type: "public" },
+];
 
 function pick(arr, i) {
   return arr[i % arr.length];
@@ -140,6 +160,8 @@ export function seedIfEmpty() {
   write(KEYS.leaveTypes, leaveTypes);
   write(KEYS.leaveRequests, []);
   write(KEYS.notifications, []);
+  write(KEYS.holidays, HOLIDAYS);
+  write(KEYS.regularizations, []);
   write(KEYS.seeded, true);
 }
 
@@ -288,6 +310,34 @@ export function getMonthlyAttendance(userId, year, month) {
   });
 }
 
+// Derives a per-day status for the month calendar widget: 'present',
+// 'absent', 'leaveApplied' (pending) or 'leaveApproved'. Nothing here is
+// stored — it's computed live from attendance + leave records.
+export function getMonthDayStatuses(userId, year, month) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const attendance = getUserAttendance(userId);
+  const leaveRequests = getUserLeaveRequests(userId);
+  const today = todayISO();
+  const statuses = {};
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    if (date > today) {
+      statuses[d] = null;
+      continue;
+    }
+    const att = attendance.find((a) => a.date === date);
+    const leave = leaveRequests.find((r) => date >= r.startDate && date <= r.endDate);
+    const dow = new Date(year, month, d).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    if (leave?.status === "approved") statuses[d] = "leaveApproved";
+    else if (leave?.status === "pending") statuses[d] = "leaveApplied";
+    else if (att) statuses[d] = "present";
+    else if (isWeekend) statuses[d] = null;
+    else statuses[d] = "absent";
+  }
+  return statuses;
+}
+
 // ---------- Leave ----------
 export function getLeaveTypes() {
   return read(KEYS.leaveTypes, []);
@@ -413,6 +463,108 @@ export function markAllRead(userId) {
     n.userId === userId ? { ...n, read: true } : n
   );
   write(KEYS.notifications, notifications);
+}
+
+// ---------- Holidays ----------
+export function getHolidays() {
+  return read(KEYS.holidays, HOLIDAYS)
+    .slice()
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
+export function getUpcomingHolidays(limit = 5) {
+  const today = todayISO();
+  return getHolidays()
+    .filter((h) => h.date >= today)
+    .slice(0, limit);
+}
+
+export function getNextHoliday() {
+  return getUpcomingHolidays(1)[0] || null;
+}
+
+// ---------- Attendance regularization ----------
+// Employees can request a correction to a past day's punch-in/out (e.g. a
+// forgotten punch). Only admins (HR/managers) can approve or reject it; on
+// approval the underlying attendance record is created/updated.
+export function getRegularizations() {
+  return read(KEYS.regularizations, []).sort((a, b) => (a.appliedOn < b.appliedOn ? 1 : -1));
+}
+
+export function getUserRegularizations(userId) {
+  return getRegularizations().filter((r) => r.userId === userId);
+}
+
+export function getPendingRegularizations() {
+  return getRegularizations().filter((r) => r.status === "pending");
+}
+
+export function getCompanyRegularizations(companyId) {
+  const companyUserIds = new Set(getUsers(companyId).map((u) => u.id));
+  return getRegularizations().filter((r) => companyUserIds.has(r.userId));
+}
+
+export function requestRegularization(userId, { date, punchIn, punchOut, reason }) {
+  if (!date || !punchIn || !punchOut || !reason?.trim()) {
+    return { ok: false, error: "All fields are required" };
+  }
+  if (date > todayISO()) {
+    return { ok: false, error: "You can only regularize a past or today's date" };
+  }
+  if (punchOut <= punchIn) {
+    return { ok: false, error: "Punch-out time must be after punch-in time" };
+  }
+  const existing = getRegularizations();
+  if (existing.some((r) => r.userId === userId && r.date === date && r.status === "pending")) {
+    return { ok: false, error: "A regularization request for this date is already pending" };
+  }
+  const record = {
+    id: uid(),
+    userId,
+    date,
+    punchIn,
+    punchOut,
+    reason: reason.trim(),
+    status: "pending",
+    appliedOn: new Date().toISOString(),
+    actionedBy: null,
+    actionedOn: null,
+  };
+  existing.push(record);
+  write(KEYS.regularizations, existing);
+  return { ok: true, record };
+}
+
+export function actionRegularization(requestId, status, actionedBy) {
+  const list = getRegularizations();
+  const idx = list.findIndex((r) => r.id === requestId);
+  if (idx === -1) return { ok: false, error: "Request not found" };
+
+  list[idx] = { ...list[idx], status, actionedBy, actionedOn: new Date().toISOString() };
+  write(KEYS.regularizations, list);
+
+  if (status === "approved") {
+    const { userId, date, punchIn, punchOut } = list[idx];
+    const punchInISO = new Date(`${date}T${punchIn}:00`).toISOString();
+    const punchOutISO = new Date(`${date}T${punchOut}:00`).toISOString();
+    const totalHours = Math.round(((new Date(punchOutISO) - new Date(punchInISO)) / 3600000) * 100) / 100;
+
+    const attendance = getAttendance();
+    const aIdx = attendance.findIndex((a) => a.userId === userId && a.date === date);
+    if (aIdx === -1) {
+      attendance.push({ id: uid(), userId, date, punchIn: punchInISO, punchOut: punchOutISO, totalHours, regularized: true });
+    } else {
+      attendance[aIdx] = { ...attendance[aIdx], punchIn: punchInISO, punchOut: punchOutISO, totalHours, regularized: true };
+    }
+    write(KEYS.attendance, attendance);
+  }
+
+  addNotification(
+    list[idx].userId,
+    `Your attendance regularization for ${list[idx].date} was ${status}`,
+    "regularization"
+  );
+  return { ok: true, record: list[idx] };
 }
 
 // ---------- Payslip (computed live, nothing stored/hardcoded as a slip) ----------

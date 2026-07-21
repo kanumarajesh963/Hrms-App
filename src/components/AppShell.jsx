@@ -14,14 +14,19 @@ import {
   X,
   Fingerprint,
   ShieldCheck,
+  PartyPopper,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useThemeMode } from "../context/ThemeModeContext";
 import { getNotifications, markAllRead, getCompanyById } from "../lib/store";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutGrid, end: true },
   { to: "/attendance", label: "Attendance", icon: Clock },
   { to: "/leave", label: "Leave", icon: CalendarDays },
+  { to: "/holidays", label: "Holidays", icon: PartyPopper },
   { to: "/payslips", label: "Payslips", icon: Wallet },
   { to: "/biometrics", label: "Biometrics", icon: Fingerprint },
   { to: "/profile", label: "Profile", icon: User },
@@ -35,6 +40,7 @@ const ADMIN_NAV = [
 
 export default function AppShell({ children }) {
   const { user, logout } = useAuth();
+  const { mode, toggleMode } = useThemeMode();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -66,8 +72,8 @@ export default function AppShell({ children }) {
         style={{
           width: 240,
           flexShrink: 0,
-          background: "var(--ink)",
-          color: "#fff",
+          background: "var(--sidebar-bg)",
+          color: "var(--sidebar-text)",
           padding: "26px 18px",
           display: "flex",
           flexDirection: "column",
@@ -85,7 +91,7 @@ export default function AppShell({ children }) {
             <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.3 }}>Havn HR</span>
           </div>
           {company && (
-            <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+            <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "var(--sidebar-text-dim2)", textTransform: "uppercase", letterSpacing: 0.6 }}>
               {company.name}
             </div>
           )}
@@ -104,11 +110,11 @@ export default function AppShell({ children }) {
                 padding: "10px 12px",
                 borderRadius: 10,
                 textDecoration: "none",
-                color: isActive ? "var(--ink)" : "rgba(255,255,255,0.75)",
-                background: isActive ? "#fff" : "transparent",
+                color: isActive ? "var(--sidebar-active-text)" : "var(--sidebar-text-dim)",
+                background: isActive ? "var(--sidebar-active-bg)" : "transparent",
                 fontWeight: 700,
                 fontSize: 14.5,
-                transition: "background 0.15s ease",
+                transition: "background 0.15s ease, color 0.15s ease",
               })}
             >
               <Icon size={18} strokeWidth={2.2} />
@@ -123,9 +129,9 @@ export default function AppShell({ children }) {
             display: "flex",
             alignItems: "center",
             gap: 10,
-            background: "rgba(255,255,255,0.08)",
+            background: "var(--sidebar-btn-bg)",
             border: "none",
-            color: "#fff",
+            color: "var(--sidebar-text)",
             padding: "10px 12px",
             borderRadius: 10,
             fontWeight: 700,
@@ -144,8 +150,8 @@ export default function AppShell({ children }) {
           position: "sticky",
           top: 0,
           zIndex: 20,
-          background: "var(--ink)",
-          color: "#fff",
+          background: "var(--sidebar-bg)",
+          color: "var(--sidebar-text)",
           padding: "14px 16px",
           alignItems: "center",
           justifyContent: "space-between",
@@ -157,9 +163,18 @@ export default function AppShell({ children }) {
           </div>
           <span style={{ fontWeight: 800, fontSize: 16 }}>Havn HR</span>
         </div>
-        <button onClick={() => setMenuOpen(true)} style={{ background: "transparent", border: "none", color: "#fff" }}>
-          <Menu size={22} />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            onClick={toggleMode}
+            aria-label="Toggle theme"
+            style={{ background: "var(--sidebar-btn-bg)", border: "none", color: "var(--sidebar-text)", width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            {mode === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <button onClick={() => setMenuOpen(true)} style={{ background: "transparent", border: "none", color: "var(--sidebar-text)" }}>
+            <Menu size={22} />
+          </button>
+        </div>
       </div>
 
       {/* Mobile slide-over menu */}
@@ -170,9 +185,9 @@ export default function AppShell({ children }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 250, background: "var(--ink)", color: "#fff", padding: 20, display: "flex", flexDirection: "column", gap: 18 }}
+            style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 250, background: "var(--sidebar-bg)", color: "var(--sidebar-text)", padding: 20, display: "flex", flexDirection: "column", gap: 18 }}
           >
-            <button onClick={() => setMenuOpen(false)} style={{ alignSelf: "flex-end", background: "transparent", border: "none", color: "#fff" }}>
+            <button onClick={() => setMenuOpen(false)} style={{ alignSelf: "flex-end", background: "transparent", border: "none", color: "var(--sidebar-text)" }}>
               <X size={22} />
             </button>
             {nav.map(({ to, label, icon: Icon, end }) => (
@@ -187,7 +202,7 @@ export default function AppShell({ children }) {
                   gap: 12,
                   padding: "10px 4px",
                   textDecoration: "none",
-                  color: isActive ? "var(--amber)" : "#fff",
+                  color: isActive ? "var(--amber)" : "var(--sidebar-text)",
                   fontWeight: 700,
                   fontSize: 16,
                 })}
@@ -197,7 +212,7 @@ export default function AppShell({ children }) {
             ))}
             <button
               onClick={handleLogout}
-              style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", border: "none", color: "#fff", padding: "10px 12px", borderRadius: 10, fontWeight: 700, marginTop: "auto" }}
+              style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--sidebar-btn-bg)", border: "none", color: "var(--sidebar-text)", padding: "10px 12px", borderRadius: 10, fontWeight: 700, marginTop: "auto" }}
             >
               <LogOut size={17} /> Sign out
             </button>
@@ -228,10 +243,19 @@ export default function AppShell({ children }) {
             <div style={{ fontSize: 17, fontWeight: 800 }}>Hi, {user?.name?.split(" ")[0]} 👋</div>
           </div>
 
-          <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              onClick={toggleMode}
+              aria-label="Toggle theme"
+              className="theme-toggle-btn"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}
+            >
+              {mode === "dark" ? <Sun size={19} /> : <Moon size={19} />}
+            </button>
+            <div style={{ position: "relative" }}>
             <button
               onClick={openNotifications}
-              style={{ position: "relative", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ position: "relative", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink)" }}
             >
               <Bell size={19} />
               {unread > 0 && (
@@ -253,6 +277,7 @@ export default function AppShell({ children }) {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </header>
 
@@ -306,6 +331,9 @@ export default function AppShell({ children }) {
           to { opacity: 1; transform: translateY(0); }
         }
         main { animation: pageFadeIn 0.35s ease; }
+
+        .theme-toggle-btn svg { transition: transform 0.35s ease; }
+        .theme-toggle-btn:hover svg { transform: rotate(24deg) scale(1.08); }
 
         @media (max-width: 860px) {
           .app-sidebar { display: none; }

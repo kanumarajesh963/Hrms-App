@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Leave from "./pages/Leave";
+import Holidays from "./pages/Holidays";
 import Payslips from "./pages/Payslips";
 import Profile from "./pages/Profile";
 import Approvals from "./pages/Approvals";
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/" element={<Protected><Dashboard /></Protected>} />
           <Route path="/attendance" element={<Protected><Attendance /></Protected>} />
           <Route path="/leave" element={<Protected><Leave /></Protected>} />
+          <Route path="/holidays" element={<Protected><Holidays /></Protected>} />
           <Route path="/payslips" element={<Protected><Payslips /></Protected>} />
           <Route path="/biometrics" element={<Protected><Biometrics /></Protected>} />
           <Route path="/profile" element={<Protected><Profile /></Protected>} />

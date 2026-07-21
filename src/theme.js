@@ -1,47 +1,86 @@
 import { createTheme } from "@mui/material/styles";
 
-// MUI theme mapped onto the app's existing design tokens (ink/amber/teal)
-// so MUI components (forms, dialogs) look native alongside hand-styled parts.
-const theme = createTheme({
-  palette: {
-    mode: "light",
-    primary: { main: "#16241f" },
-    secondary: { main: "#c77d24" },
-    success: { main: "#0f6e5c" },
-    error: { main: "#b3432b" },
-    background: { default: "#f6f4ef", paper: "#ffffff" },
-    text: { primary: "#16241f", secondary: "#6f6b5e" },
+// Palettes mirror the CSS custom properties in index.css so hand-styled
+// parts (using var(--x)) and MUI components always stay in sync.
+const PALETTES = {
+  light: {
+    ink: "#16241f",
+    muted: "#6f6b5e",
+    bg: "#f6f4ef",
+    surface: "#ffffff",
+    amber: "#c77d24",
+    teal: "#0f6e5c",
+    danger: "#b3432b",
   },
-  typography: {
-    fontFamily: '"Manrope", sans-serif',
-    button: { textTransform: "none", fontWeight: 700 },
+  dark: {
+    ink: "#f2efe7",
+    muted: "#9a9587",
+    bg: "#14181a",
+    surface: "#1c2220",
+    amber: "#e2a55a",
+    teal: "#39b096",
+    danger: "#e2775c",
   },
-  shape: { borderRadius: 12 },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: { fontWeight: 700, borderRadius: 10 },
-      },
-    },
-    MuiTextField: {
-      defaultProps: { size: "small" },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: { borderRadius: 10, background: "#f6f4ef" },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: { borderRadius: 20 },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: { fontWeight: 700 },
-      },
-    },
-  },
-});
+};
 
-export default theme;
+export function buildTheme(mode = "light") {
+  const c = PALETTES[mode];
+  return createTheme({
+    palette: {
+      mode,
+      primary: { main: c.ink },
+      secondary: { main: c.amber },
+      success: { main: c.teal },
+      error: { main: c.danger },
+      background: { default: c.bg, paper: c.surface },
+      text: { primary: c.ink, secondary: c.muted },
+    },
+    typography: {
+      fontFamily: '"Manrope", sans-serif',
+      button: { textTransform: "none", fontWeight: 700 },
+    },
+    shape: { borderRadius: 12 },
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: { fontWeight: 700, borderRadius: 10 },
+        },
+      },
+      MuiTextField: {
+        defaultProps: { size: "small" },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: { borderRadius: 10, background: "var(--bg)" },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: { backgroundImage: "none" },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          paper: { borderRadius: 20, backgroundColor: "var(--surface)" },
+        },
+      },
+      MuiPopover: {
+        styleOverrides: {
+          paper: { backgroundColor: "var(--surface)" },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: { backgroundColor: "var(--surface)" },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: { fontWeight: 700 },
+        },
+      },
+    },
+  });
+}
+
+export default buildTheme("light");
